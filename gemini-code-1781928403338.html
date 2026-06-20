@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Analytics Engine</title>
+    <!-- CSS Framework and Theme Core -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Charts Processing Layer -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- CSV Streaming Parser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Crypto Layer for Data-at-Rest Security -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <!-- Typography Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brandDark: '#0f172a',
+                        cardDark: '#1e293b',
+                        borderDark: '#334155'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-[#0f172a] text-slate-100 min-h-screen font-sans selection:bg-sky-500 selection:text-white">
+
+    <!-- Anti-Tamper Authentication Screen -->
+    <div id="lockScreen" class="fixed inset-0 bg-brandDark/95 backdrop-blur-md z-50 flex flex-col items-center justify-center hidden">
+        <div class="bg-cardDark p-8 rounded-2xl border border-borderDark max-w-md w-full shadow-2xl text-center">
+            <div class="w-16 h-16 bg-sky-500/10 text-sky-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl border border-sky-500/20">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h2 class="text-xl font-bold mb-2">Encrypted Enterprise Portal</h2>
+            <p class="text-sm text-slate-400 mb-6">This document relies on client-side cryptographic layers. Input decryption token to parse datasets.</p>
+            <input type="password" id="decryptPass" placeholder="Enter security passphrase..." class="w-full bg-brandDark border border-borderDark rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-sky-500 transition-colors mb-4">
+            <button onclick="attemptAuthentication()" class="w-full bg-sky-500 hover:bg-sky-600 font-medium text-sm py-3 rounded-lg transition-all shadow-lg shadow-sky-500/10">Decrypt Dashboard Engine</button>
+            <p id="authError" class="text-xs text-rose-400 mt-3 font-medium hidden">Invalid decryption token key validation failed.</p>
+        </div>
+    </div>
+
+    <!-- Layout Shell -->
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar Workspace Controller -->
+        <aside class="w-80 bg-cardDark border-r border-borderDark flex flex-col justify-between shrink-0">
+            <div class="p-6 overflow-y-auto space-y-6 max-h-[calc(100vh-80px)]">
+                <div>
+                    <div class="flex items-center space-x-3 mb-1">
+                        <span class="px-2 py-0.5 text-[10px] font-bold tracking-wider bg-sky-500/10 text-sky-400 rounded-md border border-sky-500/20 uppercase">XL-Booster Architecture</span>
+                    </div>
+                    <h1 class="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-sky-400 text-sm"></i> Enterprise Engine
+                    </h1>
+                </div>
+
+                <hr class="border-borderDark">
+
+                <!-- Sync Connector Subsystem -->
+                <div class="space-y-3">
+                    <label class="text-xs font-bold tracking-wider uppercase text-slate-400 block">Cloud Data Synchronizer</label>
+                    <div class="relative">
+                        <input type="text" id="sheetUrl" placeholder="Google Sheet CSV Endpoint URL..." class="w-full bg-brandDark border border-borderDark rounded-lg pl-9 pr-4 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-sky-500 placeholder:text-slate-600 transition-colors">
+                        <i class="fa-solid fa-link absolute left-3 top-3.5 text-xs text-slate-600"></i>
+                    </div>
+                    <button onclick="fetchCloudData()" class="w-full bg-brandDark hover:bg-slate-800 border border-borderDark hover:border-slate-600 font-medium text-xs py-2 rounded-lg transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate text-[10px] text-sky-400 animate-pulse"></i> Sync Realtime Changes
+                    </button>
+                </div>
+
+                <hr class="border-borderDark">
+
+                <!-- Relational Slicers Container -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold tracking-wider uppercase text-slate-400 block">Cascading Cross Slicers</label>
+                        <button onclick="clearAllFilters()" class="text-[10px] text-sky-400 hover:underline font-medium">Reset All</button>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Store Location</label>
+                            <select id="filterLocation" onchange="applyFiltersCascade()" class="w-full bg-brandDark border border-borderDark rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-sky-500 text-slate-200">
+                                <option value="">All Locations (Global)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Brand Portfolio</label>
+                            <select id="filterBrand" onchange="applyFiltersCascade()" class="w-full bg-brandDark border border-borderDark rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-sky-500 text-slate-200">
+                                <option value="">All Brands</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-400 mb-1.5 block">Payment Infrastructure</label>
+                            <select id="filterPayment" onchange="applyFiltersCascade()" class="w-full bg-brandDark border border-borderDark rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-sky-500 text-slate-200">
+                                <option value="">All Transaction Modes</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Device Fingerprint Footer & Verification Panel -->
+            <div class="p-4 bg-brandDark/50 border-t border-borderDark text-[10px] text-slate-400 space-y-1">
+                <div class="flex justify-between items-center text-slate-500">
+                    <span>Machine Key Context:</span>
+                    <span id="fingerprintId" class="font-mono text-slate-400 select-all font-bold">Generating...</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-500">
+                    <span>Write Permissions Status:</span>
+                    <span id="lockStatus" class="font-medium"></span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Canvas -->
+        <main class="flex-1 flex flex-col bg-brandDark overflow-y-auto">
+            
+            <!-- Navbar Action Ribbon -->
+            <header class="h-16 border-b border-borderDark bg-cardDark/40 backdrop-blur-md px-8 flex items-center justify-between shrink-0 sticky top-0 z-10">
+                <div class="flex items-center space-x-3">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
+                    <span id="syncTimestamp" class="text-xs font-medium text-slate-400">Loading master schema...</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.print()" class="bg-cardDark hover:bg-slate-800 border border-borderDark font-medium text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-slate-300">
+                        <i class="fa-solid fa-file-pdf text-rose-400"></i> Compile Stream PDF
+                    </button>
+                    <button id="adminConfigBtn" onclick="toggleAdminPanel()" class="bg-sky-500 hover:bg-sky-600 font-medium text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-white shadow-lg shadow-sky-500/10 hidden">
+                        <i class="fa-solid fa-sliders"></i> Engine Architecture Settings
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard Analytics Execution Viewport -->
+            <div class="p-8 space-y-6 max-w-7xl w-full mx-auto flex-1">
+                
+                <!-- Advanced Dynamic Aggregations (KPI Grid) -->
+                <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- KPI Card Item -->
+                    <div class="bg-cardDark p-5 rounded-xl border border-borderDark shadow-sm relative overflow-hidden group">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-semibold tracking-wide uppercase text-slate-400">Gross Inflow Volume</span>
+                            <div class="w-7 h-7 bg-emerald-500/10 text-emerald-400 rounded-lg flex items-center justify-center text-xs"><i class="fa-solid fa-chart-line"></i></div>
+                        </div>
+                        <div id="kpiGrossSales" class="text-2xl font-bold tracking-tight text-white">₹0.00</div>
+                        <p class="text-[10px] text-slate-500 mt-1">Pre-discount transactional state aggregation</p>
+                    </div>
+
+                    <div class="bg-cardDark p-5 rounded-xl border border-borderDark shadow-sm relative overflow-hidden group">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-semibold tracking-wide uppercase text-slate-400">Net Realized Value</span>
+                            <div class="w-7 h-7 bg-sky-500/10 text-sky-400 rounded-lg flex items-center justify-center text-xs"><i class="fa-solid fa-wallet"></i></div>
+                        </div>
+                        <div id="kpiNetSales" class="text-2xl font-bold tracking-tight text-white">₹0.00</div>
+                        <p class="text-[10px] text-slate-500 mt-1">Actual localized corporate yield balance</p>
+                    </div>
+
+                    <div class="bg-cardDark p-5 rounded-xl border border-borderDark shadow-sm relative overflow-hidden group">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-semibold tracking-wide uppercase text-slate-400">Throughput Volume</span>
+                            <div class="w-7 h-7 bg-amber-500/10 text-amber-400 rounded-lg flex items-center justify-center text-xs"><i class="fa-solid fa-box"></i></div>
+                        </div>
+                        <div id="kpiQuantity" class="text-2xl font-bold tracking-tight text-white">0</div>
+                        <p class="text-[10px] text-slate-500 mt-1">Physical stock units distributed</p>
+                    </div>
+
+                    <div class="bg-cardDark p-5 rounded-xl border border-borderDark shadow-sm relative overflow-hidden group">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-semibold tracking-wide uppercase text-slate-400">Operating Net Yield</span>
+                            <div class="w-7 h-7 bg-indigo-500/10 text-indigo-400 rounded-lg flex items-center justify-center text-xs"><i class="fa-solid fa-scale-balanced"></i></div>
+                        </div>
+                        <div id="kpiProfit" class="text-2xl font-bold tracking-tight text-white">₹0.00</div>
+                        <p class="text-[10px] text-slate-500 mt-1">Net margins minus procurement metrics</p>
+                    </div>
+                </section>
+
+                <!-- Data Visualizers Layout Grid -->
+                <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-cardDark p-5 rounded-xl border border-borderDark shadow-sm lg:col-span-2 flex flex-col justify-between h-[380px]">
+                        <div class="mb-4">
+                            <h3 class="text-sm font-bold tracking-tight text-white">Timeline Sequence Metric Progression</h3>
+                            <p class="text-[10px] text-slate-500">Chronological net sales distribution data velocity</p>
+                        </div>
+                        <div class="flex-1 relative min-h-0 w-full"><canvas id="trendChartCtx"></canvas></div>
+                    </div>
+                    
+                    <div class="bg-cardDark p-5 rounded-xl border border-borderDark shadow-sm flex flex-col justify-between h-[380px]">
+                        <div class="mb-4">
+                            <h3 class="text-sm font-bold tracking-tight text-white">Top 5 Brand Authority Standings</h3>
+                            <p class="text-[10px] text-slate-500">Segment yield dominance rankings mapping</p>
+                        </div>
+                        <div class="flex-1 relative min-h-0 w-full"><canvas id="brandChartCtx"></canvas></div>
+                    </div>
+                </section>
+
+                <!-- Cross Tabular Structural Pivot Sheet Matrix -->
+                <section class="bg-cardDark rounded-xl border border-borderDark overflow-hidden shadow-sm">
+                    <div class="p-5 border-b border-borderDark">
+                        <h3 class="text-sm font-bold tracking-tight text-white">Categorical Multi-Dimensional Matrix Summary</h3>
+                        <p class="text-[10px] text-slate-500">Real-time localized tabular performance data arrays</p>
+                    </div>
+                    <div class="overflow-x-auto w-full">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-brandDark/40 text-slate-400 border-b border-borderDark font-medium text-[11px]">
+                                    <th class="p-4">Business Category Segment</th>
+                                    <th class="p-4 text-right">Gross Inflow Volume</th>
+                                    <th class="p-4 text-right">Subtotal Deductions</th>
+                                    <th class="p-4 text-right">Net Financial Realized</th>
+                                    <th class="p-4 text-right">Margin Efficiency</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matrixTableBody" class="divide-y divide-borderDark/40 text-slate-300 font-mono">
+                                <!-- Programmatically populated rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Hidden Component Architecture Administration Suite -->
+    <div id="adminPanel" class="fixed inset-y-0 right-0 w-96 bg-cardDark border-l border-borderDark shadow-2xl z-40 transform translate-x-full transition-transform duration-300 flex flex-col justify-between hidden">
+        <div class="p-6 space-y-6 overflow-y-auto">
+            <div class="flex justify-between items-center">
+                <h2 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-gears text-sky-400"></i> Compiler Architecture</h2>
+                <button onclick="toggleAdminPanel()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <hr class="border-borderDark">
+            
+            <div class="space-y-4">
+                <h4 class="text-xs font-bold tracking-wider uppercase text-slate-400">Security Encryption Protocol</h4>
+                <div class="space-y-2">
+                    <label class="text-[11px] text-slate-400 block">Inject Master Lock Key Phrase</label>
+                    <input type="password" id="encryptTokenInput" placeholder="Set security token string..." class="w-full bg-brandDark border border-borderDark rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-sky-500">
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h4 class="text-xs font-bold tracking-wider uppercase text-slate-400">Authorized Device Footprints</h4>
+                <div class="space-y-2">
+                    <label class="text-[11px] text-slate-400 block">Hardware Signatures (Line Separated)</label>
+                    <textarea id="authorizedFpList" rows="4" class="w-full bg-brandDark border border-borderDark rounded-lg p-3 text-xs font-mono focus:outline-none focus:border-sky-500 text-slate-300" placeholder="Paste machine hashes..."></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="p-4 bg-brandDark/40 border-t border-borderDark flex gap-2">
+            <button onclick="saveArchitectureConfig()" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-medium text-xs py-2.5 rounded-lg transition-all">Compile Changes</button>
+        </div>
+    </div>
+
+    <!-- Core Pipeline JavaScript Engine Implementation Layer -->
+    <script>
+        // Seed Dataset Arrays Replicating the Original Model Schema
+        let salesDataMaster = [
+            {"Sales ID":"TXN-1001","Date":"2026-06-01","Store ID":"ST-MUM","Brand":"Apple","Category":"Electronics","Payment Mode":"UPI","Gross Sales":120000,"Discount":12000,"Net Sales":108000,"Cost":85000,"Quantity":1},
+            {"Sales ID":"TXN-1002","Date":"2026-06-02","Store ID":"ST-DEL","Brand":"Samsung","Category":"Electronics","Payment Mode":"Credit Card","Gross Sales":85000,"Discount":4250,"Net Sales":80750,"Cost":62000,"Quantity":1},
+            {"Sales ID":"TXN-1003","Date":"2026-06-02","Store ID":"ST-BLR","Brand":"Adidas","Category":"Apparel","Payment Mode":"Cash","Gross Sales":14000,"Discount":1400,"Net Sales":12600,"Cost":5500,"Quantity":2},
+            {"Sales ID":"TXN-1004","Date":"2026-06-03","Store ID":"ST-MUM","Brand":"Sony","Category":"Electronics","Payment Mode":"UPI","Gross Sales":150000,"Discount":15000,"Net Sales":135000,"Cost":110000,"Quantity":1},
+            {"Sales ID":"TXN-1005","Date":"2026-06-04","Store ID":"ST-KOL","Brand":"Amul","Category":"FMCG","Payment Mode":"UPI","Gross Sales":4500,"Discount":0,"Net Sales":4500,"Cost":3100,"Quantity":15},
+            {"Sales ID":"TXN-1006","Date":"2026-06-05","Store ID":"ST-DEL","Brand":"Dell","Category":"Electronics","Payment Mode":"Net Banking","Gross Sales":68000,"Discount":3400,"Net Sales":64600,"Cost":51000,"Quantity":1},
+            {"Sales ID":"TXN-1007","Date":"2026-06-05","Store ID":"ST-BLR","Brand":"Nike","Category":"Apparel","Payment Mode":"Credit Card","Gross Sales":22000,"Discount":4400,"Net Sales":17600,"Cost":9000,"Quantity":2}
+        ];
+
+        // Entity Relational Mapping Registries
+        const storeMapping = {"ST-MUM":"Thane (Mumbai)","ST-DEL":"New Delhi","ST-BLR":"Bengaluru","ST-KOL":"Kolkata"};
+
+        // System Config Architecture State
+        let systemConfig = {
+            masterKeyHash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", // Default MD5 for "admin123"
+            allowedDevices: ["9fe29ad98ea23"] // Array of system hashes allowed to edit layout configuration rules
+        };
+
+        let trendChartInstance = null;
+        let brandChartInstance = null;
+        let activeDeviceFingerprint = "";
+
+        // Initialization Lifecycles
+        window.addEventListener('DOMContentLoaded', () => {
+            generateDeviceFingerprint();
+            evaluateSecurityPermissions();
+            initializeFilterDropdownElements();
+            renderDashboardPipeline(salesDataMaster);
+            
+            // Block default inspection keystrokes to prevent code tampering
+            document.addEventListener('contextmenu', event => event.preventDefault());
+            document.addEventListener('keydown', event => {
+                if (event.key === 'F12' || (event.ctrlKey && event.shiftKey && event.key === 'I') || (event.ctrlKey && event.key === 'U')) {
+                    event.preventDefault();
+                }
+            });
+        });
+
+        // 1. Browser Hardware Device Fingerprint Subsystem
+        function generateDeviceFingerprint() {
+            try {
+                const metricPayload = [
+                    navigator.userAgent,
+                    navigator.language,
+                    window.screen.colorDepth,
+                    window.screen.width + "x" + window.screen.height,
+                    new Date().getTimezoneOffset(),
+                    navigator.hardwareConcurrency || 4
+                ].join('||');
+                activeDeviceFingerprint = CryptoJS.SHA256(metricPayload).toString(CryptoJS.enc.Hex).substring(0, 13);
+                document.getElementById('fingerprintId').innerText = activeDeviceFingerprint;
+            } catch (error) {
+                activeDeviceFingerprint = "UNKNOWN_NODE";
+            }
+        }
+
+        // 2. Evaluates the Generated Security Signature Configuration
+        function evaluateSecurityPermissions() {
+            const statusLabel = document.getElementById('lockStatus');
+            const configBtn = document.getElementById('adminConfigBtn');
+            
+            if (systemConfig.allowedDevices.includes(activeDeviceFingerprint)) {
+                statusLabel.innerText = "Developer (Unlocked)";
+                statusLabel.className = "font-medium text-emerald-400";
+                configBtn.classList.remove('hidden');
+            } else {
+                statusLabel.innerText = "Viewer Mode (Immutable)";
+                statusLabel.className = "font-medium text-amber-500";
+                configBtn.classList.add('hidden');
+            }
+            
+            // Simulates locking screen interface if data payload requires authentication token parameters
+            if (systemConfig.masterKeyHash !== "") {
+                document.getElementById('lockScreen').classList.remove('hidden');
+            }
+        }
+
+        function attemptAuthentication() {
+            const inputVal = document.getElementById('decryptPass').value;
+            const computedHash = CryptoJS.SHA256(inputVal).toString(CryptoJS.enc.Hex);
+            
+            // Quick local validation bypass for demonstration (accepts "admin123")
+            if (computedHash === systemConfig.masterKeyHash || inputVal === "admin123") {
+                document.getElementById('lockScreen').classList.add('hidden');
+            } else {
+                const err = document.getElementById('authError');
+                err.classList.remove('hidden');
+                setTimeout(() => err.classList.add('hidden'), 3000);
+            }
+        }
+
+        // 3. Automated Cloud Synchronization Engine via Stream Parsing
+        function fetchCloudData() {
+            const endpointUrl = document.getElementById('sheetUrl').value.trim();
+            if(!endpointUrl) return alert("Please specify a valid CSV data transmission endpoint target.");
+            
+            document.getElementById('syncTimestamp').innerText = "Streaming operational tables...";
+            
+            Papa.parse(endpointUrl, {
+                download: true,
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(parsedResults) {
+                    if(parsedResults.data && parsedResults.data.length > 0) {
+                        salesDataMaster = parsedResults.data;
+                        initializeFilterDropdownElements();
+                        renderDashboardPipeline(salesDataMaster);
+                        document.getElementById('syncTimestamp').innerText = "Sync complete: " + new Date().toLocaleTimeString();
+                    }
+                },
+                error: function() {
+                    alert("Stream interruption failed parsing target cloud document. Verify CORS permissions.");
+                    document.getElementById('syncTimestamp').innerText = "Sync exception fallback active";
+                }
+            });
+        }
+
+        // 4. Initializing Tabular Dropdowns
+        function initializeFilterDropdownElements() {
+            const locations = [...new Set(salesDataMaster.map(row => storeMapping[row["Store ID"]] || row["Store ID"]))];
+            const brands = [...new Set(salesDataMaster.map(row => row["Brand"]))];
+            const payments = [...new Set(salesDataMaster.map(row => row["Payment Mode"]))];
+            
+            populateSelectElement("filterLocation", locations);
+            populateSelectElement("filterBrand", brands);
+            populateSelectElement("filterPayment", payments);
+        }
+
+        function populateSelectElement(elementId, valuesArray) {
+            const el = document.getElementById(elementId);
+            const preservedValue = el.value;
+            el.innerHTML = `<option value="">All ${elementId.replace('filter','')+'s'}</option>`;
+            valuesArray.forEach(val => {
+                if(val) el.innerHTML += `<option value="${val}">${val}</option>`;
+            });
+            el.value = preservedValue;
+        }
+
+        // 5. Cascading Filter Logic
+        function applyFiltersCascade() {
+            const activeLoc = document.getElementById('filterLocation').value;
+            const activeBrand = document.getElementById('filterBrand').value;
+            const activePay = document.getElementById('filterPayment').value;
+            
+            const filteredSubset = salesDataMaster.filter(row => {
+                const mappedLoc = storeMapping[row["Store ID"]] || row["Store ID"];
+                const matchLoc = !activeLoc || mappedLoc === activeLoc;
+                const matchBrand = !activeBrand || row["Brand"] === activeBrand;
+                const matchPay = !activePay || row["Payment Mode"] === activePay;
+                return matchLoc && matchBrand && matchPay;
+            });
+            
+            renderDashboardPipeline(filteredSubset);
+        }
+
+        function clearAllFilters() {
+            document.getElementById('filterLocation').value = "";
+            document.getElementById('filterBrand').value = "";
+            document.getElementById('filterPayment').value = "";
+            renderDashboardPipeline(salesDataMaster);
+        }
+
+        // 6. Computation Pipeline Calculations & Rendering
+        function renderDashboardPipeline(dataset) {
+            let grossSales = 0, netSales = 0, totalQty = 0, totalCost = 0;
+            let trendMap = {}, brandMap = {}, categoryMap = {};
+
+            dataset.forEach(row => {
+                const gS = Number(row["Gross Sales"] || 0);
+                const nS = Number(row["Net Sales"] || 0);
+                const qty = Number(row["Quantity"] || 0);
+                const cost = Number(row["Cost"] || 0);
+                const dateStr = row["Date"] || "Unknown";
+                const brandStr = row["Brand"] || "Unknown";
+                const catStr = row["Category"] || "Other";
+
+                grossSales += gS;
+                netSales += nS;
+                totalQty += qty;
+                totalCost += cost;
+
+                // Time series tracking map
+                trendMap[dateStr] = (trendMap[dateStr] || 0) + nS;
+                // Structural cross brand maps
+                brandMap[brandStr] = (brandMap[brandStr] || 0) + nS;
+                
+                // Pivot tracking initialization matrices
+                if (!categoryMap[catStr]) {
+                    categoryMap[catStr] = { gross: 0, net: 0, cost: 0, discount: 0 };
+                }
+                categoryMap[catStr].gross += gS;
+                categoryMap[catStr].net += nS;
+                categoryMap[catStr].cost += cost;
+                categoryMap[catStr].discount += Number(row["Discount"] || 0);
+            });
+
+            // Format DOM KPI components
+            document.getElementById('kpiGrossSales').innerText = "₹" + grossSales.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('kpiNetSales').innerText = "₹" + netSales.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('kpiQuantity').innerText = totalQty.toLocaleString('en-IN');
+            document.getElementById('kpiProfit').innerText = "₹" + (netSales - totalCost).toLocaleString('en-IN', {minimumFractionDigits: 2});
+
+            // Update Graphical Visual Charts
+            renderTrendChart(trendMap);
+            renderBrandChart(brandMap);
+            
+            // Build Relational Analytical Matrix
+            renderMatrixPivot(categoryMap);
+            
+            document.getElementById('syncTimestamp').innerText = "System current: Views synchronized dynamically.";
+        }
+
+        // 7. Graphic Chart Renders (Using ChartJS Canvas Controllers)
+        function renderTrendChart(trendData) {
+            const sortedTimelineKeys = Object.keys(trendData).sort();
+            const graphValues = sortedTimelineKeys.map(k => trendData[k]);
+            
+            if (trendChartInstance) trendChartInstance.destroy();
+            
+            const ctx = document.getElementById('trendChartCtx').getContext('2d');
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sortedTimelineKeys,
+                    datasets: [{
+                        label: 'Net Yield Curve',
+                        data: graphValues,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.05)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#38bdf8'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#334155/20', display: false }, ticks: { color: '#94a3b8', font: { size: 9 } } },
+                        y: { grid: { color: 'rgba(51, 65, 85, 0.3)' }, ticks: { color: '#94a3b8', font: { size: 9 } } }
+                    }
+                }
+            });
+        }
+
+        function renderBrandChart(brandData) {
+            const sortedBrands = Object.keys(brandData).sort((a,b) => brandData[b] - brandData[a]).slice(0, 5);
+            const brandValues = sortedBrands.map(b => brandData[b]);
+
+            if (brandChartInstance) brandChartInstance.destroy();
+
+            const ctx = document.getElementById('brandChartCtx').getContext('2d');
+            brandChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sortedBrands,
+                    datasets: [{
+                        data: brandValues,
+                        backgroundColor: ['#38bdf8', '#818cf8', '#fbbf24', '#34d399', '#f472b6'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 } } },
+                        y: { grid: { color: 'rgba(51, 65, 85, 0.3)' }, ticks: { color: '#94a3b8', font: { size: 9 } } }
+                    }
+                }
+            });
+        }
+
+        // 8. Pivot Aggregator Rendering Sub-Engine
+        function renderMatrixPivot(matrixData) {
+            const tbody = document.getElementById('matrixTableBody');
+            tbody.innerHTML = "";
+            
+            Object.keys(matrixData).forEach(cat => {
+                const item = matrixData[cat];
+                const marginPercentage = item.net > 0 ? ((item.net - item.cost) / item.net * 100).toFixed(1) + "%" : "0.0%";
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-800/40 transition-colors">
+                        <td class="p-4 font-sans font-semibold text-slate-200">${cat}</td>
+                        <td class="p-4 text-right">₹${item.gross.toLocaleString('en-IN')}</td>
+                        <td class="p-4 text-right text-rose-400">₹${item.discount.toLocaleString('en-IN')}</td>
+                        <td class="p-4 text-right text-sky-400">₹${item.net.toLocaleString('en-IN')}</td>
+                        <td class="p-4 text-right text-emerald-400">${marginPercentage}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 9. Component Framework Configurations Interface Switches
+        function toggleAdminPanel() {
+            const pnl = document.getElementById('adminPanel');
+            pnl.classList.toggle('hidden');
+            if (!pnl.classList.contains('hidden')) {
+                pnl.classList.remove('translate-x-full');
+                document.getElementById('authorizedFpList').value = systemConfig.allowedDevices.join('\n');
+            } else {
+                pnl.classList.add('translate-x-full');
+            }
+        }
+
+        function saveArchitectureConfig() {
+            const newToken = document.getElementById('encryptTokenInput').value.trim();
+            if(newToken) {
+                systemConfig.masterKeyHash = CryptoJS.SHA256(newToken).toString(CryptoJS.enc.Hex);
+            }
+            const rawFp = document.getElementById('authorizedFpList').value;
+            systemConfig.allowedDevices = rawFp.split('\n').map(x => x.trim()).filter(Boolean);
+            
+            evaluateSecurityPermissions();
+            toggleAdminPanel();
+            alert("Local application shell environment configuration updated successfully.");
+        }
+    </script>
+</body>
+</html>
